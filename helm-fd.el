@@ -65,17 +65,18 @@
 (defsubst helm-fd--helm-header (dir)
   (concat "Search in " (abbreviate-file-name dir)))
 
-(defvar helm-fd-map
-  (let ((map (make-sparse-keymap)))
-    ;(set-keymap-parent map helm-ag-map)
-    ;define-key map (kbd "C-l") 'helm-ag--do-ag-up-one-level)
-    ;define-key map (kbd "C-c ?") 'helm-ag--do-ag-help)
-    map)
-  "Keymap for `helm-fd'.")
+(defun helm-fd--read-file-name ()
+  (let ((dir (helm-read-file-name
+              "Search in directory: "
+              :default default-directory
+              :must-match t)))
+    (if (file-directory-p dir) dir
+      (helm-basename dir))))
+
 
 (defun helm-fd--helm ()
   (let ((search-dir helm-fd--default-directory))
-    ;(helm-attrset 'name (helm-fd--helm-header search-dir))
+                                        ;(helm-attrset 'name (helm-fd--helm-header search-dir))
     (helm :sources '(helm-source-fd) :buffer "*helm-fd*" :keymap helm-fd-map
           :history helm-fd--helm-history)))
 
@@ -89,7 +90,7 @@
          (has-query (not (string= query ""))))
     (when has-query
       (let ((cmd (helm-fd--do-fd-command)))
-       (append (cdr cmd)
+        (append (cdr cmd)
                 options
                 (and has-query (list query))
                 (car cmd))))))
@@ -114,8 +115,13 @@
   (let ((cmd-args (helm-fd--construct-do-fd-command helm-pattern)))
     (when cmd-args
       (let ((proc (apply #'start-process "helm-do-fd" nil cmd-args)))
-        (setq helm-fd--ignore-case (helm-ag--ignore-case-p cmd-args helm-pattern))
+        (setq helm-fd--ignore-case (helm-fd--ignore-case-p cmd-args helm-pattern))
         proc))))
+
+(defun helm-fd--run-other-window-action ()
+  (interactive)
+  (with-helm-alive-p
+    (helm-exit-and-execute-action #'helm-fd--action-find-file-other-window)))
 
 (defun helm-fd--action-find-file (candidate)
   (find-file candidate))
@@ -125,11 +131,19 @@
 
 (defvar helm-fd--actions
   (helm-make-actions
-   "Open file"              #'find-file
-   "Open file other window" #'find-file-other-window
+   "Find file"              #'find-file
+   "Find file other window `C-c o'" #'find-file-other-window
                                         ;"Save results in buffer" #'helm-ag--action-save-buffer
                                         ;"Edit search results"    #'helm-ag--edit
    ))
+
+
+(defvar helm-fd-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c o") 'helm-fd--run-other-window-action)
+    map)
+  "Keymap for `helm-fd'.")
+
 
 (defvar helm-source-fd
   (helm-build-async-source "fd"
@@ -148,21 +162,18 @@
   "Run fd inside the current directory."
   (interactive)
   (helm-fd--init-state)
-  (helm-aif (buffer-file-name)
-      (helm-fd default-directory)))
+  (helm-aif (stringp default-directory)
+      (helm-fd default-directory)
+    (error "Buffer not associated with a directory")))
 
 ;;;###autoload
 (defun helm-fd (&optional basedir)
-  "Run fd in the specified directory."
+  "Run fd in the specified directory BASEDIR."
   (interactive)
   (require 'helm-mode)
   (helm-fd--init-state)
   (let ((helm-fd--default-directory
-         (or basedir (helm-basedir
-                      (helm-read-file-name
-                       "Search in directory: "
-                       :default default-directory
-                       :must-match t)))))
+         (or basedir (helm-fd--read-file-name))))
     (helm-fd--helm)))
 
 (provide 'helm-fd)
