@@ -1,9 +1,12 @@
-;;; helm-fd.el --- Emacs/Helm interface to fd             -*- lexical-binding: t; -*-
+;;; helm-fd.el --- Emacs/Helm interface to fd -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2017
 
 ;; Author: Ian Pickering <ipickering2@gmail.com>
 ;; Keywords: tools
+;; URL: https://github.com/Ruin0x11/helm-fd
+;; Version: 0.01
+;; Package-Requires: ((emacs "24.4") (helm "2.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
